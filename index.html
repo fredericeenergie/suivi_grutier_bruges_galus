@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>BRUGES GALUS — Suivi grutier</title>
+<style>
+  :root{
+    --bg:#15181A; --bg-elevated:#1E2225; --bg-panel:#20242A;
+    --text:#EEF1F3; --text-dim:#98A2AA;
+    --accent:#F2B705; --accent-text:#161616;
+    --ok:#4CAF6D; --ok-soft:#233127;
+    --warn:#E8654A; --warn-soft:#332320;
+    --border:#31363B; --border-soft:#272B2F; --focus:#6FB7FF;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#F1EEE7; --bg-elevated:#FFFFFF; --bg-panel:#FFFFFF;
+      --text:#191B1D; --text-dim:#5D6469;
+      --accent:#C98F00; --accent-text:#191B1D;
+      --ok:#2B8A50; --ok-soft:#E4F1E8;
+      --warn:#C13F2B; --warn-soft:#F8E4DF;
+      --border:#DCD7CC; --border-soft:#E7E3D9; --focus:#1B6FC9;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F1EEE7; --bg-elevated:#FFFFFF; --bg-panel:#FFFFFF;
+    --text:#191B1D; --text-dim:#5D6469;
+    --accent:#C98F00; --accent-text:#191B1D;
+    --ok:#2B8A50; --ok-soft:#E4F1E8;
+    --warn:#C13F2B; --warn-soft:#F8E4DF;
+    --border:#DCD7CC; --border-soft:#E7E3D9; --focus:#1B6FC9;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-tap-highlight-color:transparent; padding-bottom:48px;
+  }
+  a{color:inherit;}
+  .wrap{max-width:640px;margin:0 auto;}
+
+  header.top{position:sticky;top:0;z-index:20;background:var(--bg-elevated);border-bottom:1px solid var(--border);}
+  .top-inner{max-width:640px;margin:0 auto;padding:14px 16px 10px;}
+  .title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0;}
+  .brand img.logo{height:30px;width:auto;border-radius:6px;flex:none;object-fit:contain;}
+  .brand h1{font-size:16.5px;margin:0;font-weight:800;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .brand .tagline{margin:0;font-size:11px;color:var(--text-dim);}
+  .head-actions{display:flex;align-items:center;gap:8px;flex:none;}
+  .gear-btn{
+    width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--bg-panel);
+    color:var(--text);font-size:15px;display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .sync{font-size:11px;color:var(--text-dim);white-space:nowrap;display:flex;align-items:center;gap:5px;}
+  .sync .dotstate{width:7px;height:7px;border-radius:50%;background:var(--text-dim);flex:none;}
+  .sync[data-state="ok"] .dotstate{background:var(--ok);}
+  .sync[data-state="pending"] .dotstate{background:var(--accent);}
+  .sync[data-state="error"] .dotstate{background:var(--warn);}
+  .subtitle{margin:6px 0 0;font-size:12.5px;color:var(--text-dim);}
+
+  .banner{font-size:12.5px;padding:8px 16px;max-width:640px;margin:0 auto;border-bottom:1px solid var(--border);}
+  .banner.warn{background:var(--warn-soft);color:var(--warn);}
+  .banner.info{background:var(--ok-soft);color:var(--ok);}
+
+  .nav{display:flex;align-items:center;gap:8px;margin-top:12px;}
+  .nav button.arrow{
+    background:var(--bg-panel);border:1px solid var(--border);color:var(--text);
+    width:38px;height:38px;border-radius:10px;font-size:18px;line-height:1;
+    display:flex;align-items:center;justify-content:center;flex:none;
+  }
+  .nav button.arrow:disabled{opacity:.35;}
+  .nav .datebox{flex:1;text-align:center;min-width:0;}
+  .nav .datebox .day-name{font-weight:800;font-size:15px;letter-spacing:-0.01em;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .nav .datebox .day-sub{font-size:11.5px;color:var(--text-dim);margin-top:1px;}
+  .nav .today-btn{background:none;border:1px solid var(--border);color:var(--text-dim);font-size:11.5px;padding:7px 9px;border-radius:8px;flex:none;}
+
+  .datepicker-row{margin-top:8px;}
+  .datepicker-row input[type=date]{width:100%;background:var(--bg-panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 8px;font-size:12.5px;color-scheme:light dark;}
+
+  .strip{display:flex;gap:6px;overflow-x:auto;padding:12px 16px 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;}
+  .strip::-webkit-scrollbar{height:0;}
+  .chip{flex:none;scroll-snap-align:center;width:44px;height:54px;border-radius:10px;background:var(--bg-panel);border:1px solid var(--border);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;position:relative;}
+  .chip .chip-day{font-size:14px;font-weight:800;}
+  .chip .chip-wd{font-size:9.5px;color:var(--text-dim);text-transform:lowercase;}
+  .chip.weekend{background:var(--warn-soft);}
+  .chip.weekend .chip-wd{color:var(--warn);}
+  .chip.active{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset;}
+  .chip-dot{width:5px;height:5px;border-radius:50%;background:transparent;position:absolute;bottom:5px;}
+  .chip-dot.filled{background:var(--ok);}
+
+  main{padding:4px 16px 24px;}
+  section.block{background:var(--bg-panel);border:1px solid var(--border);border-radius:14px;margin-top:14px;overflow:hidden;}
+  section.block h2{font-size:13px;margin:0;padding:12px 14px 8px;font-weight:800;letter-spacing:-0.01em;}
+  section.block .block-note{padding:0 14px 10px;margin:0;font-size:12px;color:var(--text-dim);}
+  section.block h3.sub{font-size:11.5px;margin:6px 14px 2px;color:var(--text-dim);font-weight:700;}
+
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-top:1px solid var(--border-soft);transition:background .15s;}
+  .row-label{font-size:13.5px;line-height:1.3;}
+  .row.is-active{background:var(--ok-soft);}
+  .row-total .stp-val{font-size:14px;font-weight:800;min-width:auto;}
+
+  .stepper{display:flex;align-items:center;gap:0;flex:none;}
+  .stp-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--bg-elevated);color:var(--text);font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;}
+  .stp-btn:active{background:var(--accent);color:var(--accent-text);border-color:var(--accent);}
+  .stp-val{min-width:30px;text-align:center;font-size:15px;font-weight:800;}
+
+  .row-toggle{cursor:pointer;}
+  .toggle-box{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--border);background:var(--bg-elevated);flex:none;position:relative;}
+  .toggle-box.checked{background:var(--ok);border-color:var(--ok);}
+  .toggle-box.checked::after{content:"";position:absolute;left:7px;top:3px;width:6px;height:11px;border:solid #0f1210;border-width:0 2.5px 2.5px 0;transform:rotate(40deg);}
+
+  textarea#commentaire{width:calc(100% - 28px);min-height:88px;resize:vertical;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px;font-size:13.5px;font-family:inherit;margin:10px 14px 14px;}
+  textarea#commentaire:focus{outline:2px solid var(--focus);outline-offset:1px;}
+
+  .week-comments{margin:6px 14px 10px;font-size:12px;color:var(--text-dim);background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:none;}
+
+  .export-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px 14px;}
+  .export-row .export-group{border:1px solid var(--border);border-radius:10px;padding:8px;}
+  .export-row .export-group h4{margin:0 0 6px;font-size:11px;color:var(--text-dim);font-weight:700;}
+  .export-btn{width:100%;margin-top:6px;padding:9px 8px;border-radius:8px;border:1px solid var(--border);background:var(--bg-elevated);color:var(--text);font-size:12.5px;font-weight:700;}
+  .export-btn:first-of-type{margin-top:0;}
+  .export-btn.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent);}
+  .export-note{padding:0 14px 12px;margin:0;font-size:11px;color:var(--text-dim);}
+
+  .stp-btn:focus-visible,.row-toggle:focus-visible,.chip:focus-visible,.nav .arrow:focus-visible,.today-btn:focus-visible,.export-btn:focus-visible,.gear-btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+
+  footer.hint{max-width:640px;margin:6px auto 0;padding:0 16px;font-size:11px;color:var(--text-dim);}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:50;}
+  .modal-backdrop.open{display:flex;}
+  .modal{
+    background:var(--bg-elevated);border:1px solid var(--border);border-radius:16px 16px 0 0;
+    max-width:640px;width:100%;padding:18px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height:85vh;overflow-y:auto;
+  }
+  @media (min-width:680px){ .modal-backdrop{align-items:center;} .modal{border-radius:16px;} }
+  .modal h3{margin:0 0 4px;font-size:15px;}
+  .modal p{margin:4px 0 10px;font-size:12.5px;color:var(--text-dim);line-height:1.5;}
+  .modal label{display:block;font-size:12px;font-weight:700;margin:12px 0 5px;}
+  .modal input[type=password], .modal input[type=text]{
+    width:100%;background:var(--bg-panel);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:9px 10px;font-size:13.5px;font-family:inherit;
+  }
+  .modal .modal-actions{display:flex;gap:8px;margin-top:16px;}
+  .modal .modal-actions button{flex:1;padding:11px;border-radius:9px;border:1px solid var(--border);font-size:13.5px;font-weight:700;}
+  .modal .btn-save{background:var(--accent);color:var(--accent-text);border-color:var(--accent);}
+  .modal .btn-clear{background:var(--bg-panel);color:var(--warn);}
+  .modal .btn-close{background:none;color:var(--text-dim);}
+  .modal .adv-toggle{margin-top:14px;font-size:11.5px;color:var(--text-dim);text-decoration:underline;background:none;border:none;padding:0;}
+  .modal .adv-fields{display:none;margin-top:8px;}
+  .modal .adv-fields.open{display:block;}
+  .modal-status{margin-top:10px;font-size:12px;}
+  .modal-status.err{color:var(--warn);}
+  .modal-status.ok{color:var(--ok);}
+
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important; scroll-behavior:auto !important;} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="title-row">
+      <div class="brand">
+        <img id="logoImg" class="logo" src="logo.jpg" alt="eqos" onerror="this.style.display='none'">
+        <div>
+          <h1>BRUGES GALUS</h1>
+          <p class="tagline">Suivi grutier</p>
+        </div>
+      </div>
+      <div class="head-actions">
+        <div class="sync" id="syncStatus" data-state="pending"><span class="dotstate"></span><span id="syncLabel">Chargement…</span></div>
+        <button type="button" class="gear-btn" id="btnSettings" aria-label="Réglages">⚙</button>
+      </div>
+    </div>
+    <p class="subtitle">Chantier du 14/09/2026 au 04/12/2026 — présence des engins et intervenants</p>
+
+    <div class="nav">
+      <button class="arrow" id="btnPrev" aria-label="Jour précédent">‹</button>
+      <div class="datebox">
+        <div class="day-name" id="dayName">—</div>
+        <div class="day-sub" id="daySub">—</div>
+      </div>
+      <button class="arrow" id="btnNext" aria-label="Jour suivant">›</button>
+      <button class="today-btn" id="btnToday">Aujourd'hui</button>
+    </div>
+    <div class="datepicker-row">
+      <input type="date" id="datePicker" aria-label="Choisir une date">
+    </div>
+  </div>
+  <div class="strip" id="strip"></div>
+</header>
+
+<div id="setupBanner" class="banner warn" style="display:none;">
+  Configuration requise : ouvrez ce fichier (index.html), repérez <code>CONFIG_DEFAULTS</code> en haut du script, et complétez <code>owner</code> et <code>repo</code> avec votre compte et votre dépôt GitHub.
+</div>
+<div id="noTokenBanner" class="banner warn" style="display:none;">
+  Aucun code d'accès enregistré sur cet appareil : vous pouvez consulter les données mais pas encore les modifier. Touchez ⚙ en haut pour coller le code.
+</div>
+
+<main>
+  <div class="wrap">
+    <section class="block" id="secEngins">
+      <h2>Matériel sur chantier</h2>
+      <p class="block-note">Nombre d'engins disponibles / présents ce jour.</p>
+      <div id="rowsEngins"></div>
+    </section>
+
+    <section class="block" id="secNuit">
+      <h2 id="nuitTitle">Nuit</h2>
+      <p class="block-note" id="nuitSub"></p>
+      <div id="rowsNuit"></div>
+      <h3 class="sub">Stand-by câbles</h3>
+      <div id="rowsStandby"></div>
+    </section>
+
+    <section class="block" id="secWeekend">
+      <h2>Week-end et jours fériés</h2>
+      <div id="rowsWeekend"></div>
+    </section>
+
+    <section class="block" id="secCoord">
+      <h2>Coordination</h2>
+      <div id="rowsCoord"></div>
+    </section>
+
+    <section class="block" id="secServices">
+      <h2>Interventions ponctuelles</h2>
+      <div id="rowsServices"></div>
+    </section>
+
+    <section class="block" id="secComment">
+      <h2>Commentaire du jour</h2>
+      <textarea id="commentaire" placeholder="Remarques, incidents, retards, précisions sur ce jour…"></textarea>
+    </section>
+
+    <section class="block" id="secWeekTotal">
+      <h2 id="weekRange">Récapitulatif hebdomadaire</h2>
+      <p class="block-note">Totaux cumulés sur la semaine du jour affiché ci-dessus.</p>
+      <h3 class="sub">Matériel</h3>
+      <div id="rowsWeekEngins"></div>
+      <h3 class="sub">Stand-by câbles</h3>
+      <div id="rowsWeekStandby"></div>
+      <h3 class="sub">Intervenants</h3>
+      <div id="rowsWeekMisc"></div>
+      <h3 class="sub">Interventions ponctuelles</h3>
+      <div id="rowsWeekServices"></div>
+      <div class="week-comments" id="weekComments"></div>
+    </section>
+
+    <section class="block" id="secExport">
+      <h2>Exporter</h2>
+      <div class="export-row">
+        <div class="export-group">
+          <h4>Jour affiché</h4>
+          <button class="export-btn primary" id="btnExportDayPdf">PDF</button>
+          <button class="export-btn" id="btnExportDayCsv">CSV</button>
+        </div>
+        <div class="export-group">
+          <h4>Semaine affichée</h4>
+          <button class="export-btn primary" id="btnExportWeekPdf">PDF</button>
+          <button class="export-btn" id="btnExportWeekCsv">CSV</button>
+        </div>
+      </div>
+      <p class="export-note">Le fichier est téléchargé directement sur votre appareil.</p>
+    </section>
+
+    <footer class="hint">Les données sont stockées dans votre dépôt GitHub. Le point vert sur la frise indique un jour déjà renseigné. Les mises à jour des collègues apparaissent après quelques dizaines de secondes.</footer>
+  </div>
+</main>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h3>Réglages</h3>
+    <p>Collez ici le code d'accès (jeton GitHub) que votre responsable vous a transmis. Il est nécessaire pour enregistrer vos saisies. Il reste uniquement sur cet appareil.</p>
+    <label for="tokenInput">Code d'accès</label>
+    <input type="password" id="tokenInput" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button type="button" class="adv-toggle" id="advToggle">Options avancées (dépôt GitHub)</button>
+    <div class="adv-fields" id="advFields">
+      <label for="ownerInput">Compte GitHub (owner)</label>
+      <input type="text" id="ownerInput" autocomplete="off">
+      <label for="repoInput">Nom du dépôt</label>
+      <input type="text" id="repoInput" autocomplete="off">
+      <label for="branchInput">Branche</label>
+      <input type="text" id="branchInput" autocomplete="off">
+    </div>
+    <div class="modal-status" id="modalStatus"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-clear" id="btnClearToken">Effacer</button>
+      <button type="button" class="btn-close" id="btnCloseModal">Fermer</button>
+      <button type="button" class="btn-save" id="btnSaveToken">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  // ===================================================================
+  // À MODIFIER avant de mettre en ligne : votre compte et votre dépôt
+  // GitHub. Créez un dépôt (public de préférence pour rester gratuit),
+  // ajoutez-y un fichier "data.json" contenant simplement {}.
+  // ===================================================================
+  var CONFIG_DEFAULTS = {
+    owner: "VOTRE-COMPTE-GITHUB",
+    repo: "VOTRE-DEPOT",
+    branch: "main",
+    path: "data.json"
+  };
+
+  var START = "2026-09-14";
+  var END   = "2026-12-04";
+
+  var ENGINS = [
+    {id:"g40",  label:"Grue 40 t"},
+    {id:"g55",  label:"Grue 55 t"},
+    {id:"g60",  label:"Grue 60 t"},
+    {id:"g70",  label:"Grue 70 t"},
+    {id:"g90",  label:"Grue 90 t"},
+    {id:"g100", label:"Grue 100 t"},
+    {id:"g130", label:"Grue 130 t"},
+    {id:"camionbras", label:"Camion bras grue 66 t/m"},
+    {id:"semiremorque", label:"Semi-remorque / semi-plateau 13 m"},
+    {id:"nacelle40", label:"Nacelle 40 m (sans opérateur)"}
+  ];
+
+  var STANDBY = [
+    {id:"sb60",  label:"Grue 60 t"},
+    {id:"sb70",  label:"Grue 70 t"},
+    {id:"sb90",  label:"Grue 90 t"},
+    {id:"sb100", label:"Grue 100 t"}
+  ];
+
+  var SERVICES = [
+    {id:"transfertNacelle", label:"Transfert d'engin (nacelle)"},
+    {id:"contrepoids100", label:"Transport contrepoids additionnels — grue 100 t"},
+    {id:"contrepoids130", label:"Transport contrepoids additionnels — grue 130 t"}
+  ];
+
+  var ALL_NUMERIC_PATHS = []
+    .concat(ENGINS.map(function(e){return "engins."+e.id;}))
+    .concat(STANDBY.map(function(e){return "standbyNuit."+e.id;}))
+    .concat(["nuit","samedi","dimancheFerie","surveillant"])
+    .concat(SERVICES.map(function(e){return "services."+e.id;}));
+  var ALL_TOGGLE_PATHS = ["coordination"];
+
+  function pad(n){ return (n<10?"0":"")+n; }
+  function buildDates(startISO,endISO){
+    var s=startISO.split("-").map(Number), e=endISO.split("-").map(Number);
+    var cur=new Date(s[0],s[1]-1,s[2],12,0,0), end=new Date(e[0],e[1]-1,e[2],12,0,0), out=[];
+    while(cur<=end){ out.push(cur.getFullYear()+"-"+pad(cur.getMonth()+1)+"-"+pad(cur.getDate())); cur.setDate(cur.getDate()+1); }
+    return out;
+  }
+  function isoToDate(iso){ var p=iso.split("-").map(Number); return new Date(p[0],p[1]-1,p[2],12,0,0); }
+  function addDays(dateObj,n){ var d=new Date(dateObj); d.setDate(d.getDate()+n); return d; }
+  function isoOf(dateObj){ return dateObj.getFullYear()+"-"+pad(dateObj.getMonth()+1)+"-"+pad(dateObj.getDate()); }
+  function todayLocalISO(){ return isoOf(new Date()); }
+  function isWeekend(dateObj){ var wd=dateObj.getDay(); return wd===0||wd===6; }
+  function fmtLong(dateObj){ return dateObj.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}); }
+  function fmtShort(dateObj){ return dateObj.toLocaleDateString("fr-FR",{weekday:"short",day:"2-digit",month:"2-digit"}); }
+  function sid(path){ return path.replace(/\./g,"-"); }
+  function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+
+  function defaultDayData(dateISO){
+    var engins={}, standby={}, services={};
+    ENGINS.forEach(function(e){ engins[e.id]=0; });
+    STANDBY.forEach(function(e){ standby[e.id]=0; });
+    SERVICES.forEach(function(e){ services[e.id]=0; });
+    return {date:dateISO, engins:engins, standbyNuit:standby, nuit:0, samedi:0, dimancheFerie:0, coordination:false, surveillant:0, services:services, commentaire:""};
+  }
+  function mergeDefaults(raw, dateISO){
+    var base = defaultDayData(dateISO);
+    if(!raw || typeof raw!=="object") return base;
+    var merged={};
+    for(var k in base) merged[k]=base[k];
+    for(var k2 in raw) merged[k2]=raw[k2];
+    merged.engins = Object.assign({}, base.engins, raw.engins||{});
+    merged.standbyNuit = Object.assign({}, base.standbyNuit, raw.standbyNuit||{});
+    merged.services = Object.assign({}, base.services, raw.services||{});
+    merged.date = dateISO;
+    return merged;
+  }
+  function getNested(obj,path){ var parts=path.split("."), o=obj; for(var i=0;i<parts.length;i++){ if(o==null) return undefined; o=o[parts[i]]; } return o; }
+  function setNested(obj,path,value){ var parts=path.split("."), ref=obj; for(var i=0;i<parts.length-1;i++){ if(!ref[parts[i]]) ref[parts[i]]={}; ref=ref[parts[i]]; } ref[parts[parts.length-1]]=value; }
+  function computeHasActivity(data){
+    var any = ALL_NUMERIC_PATHS.some(function(p){ return (getNested(data,p)||0)>0; });
+    return any || !!data.coordination || !!(data.commentaire && data.commentaire.trim());
+  }
+
+  function stepperRow(label, path){
+    return '<div class="row" data-path="'+path+'"><span class="row-label">'+label+'</span><div class="stepper">'
+      + '<button type="button" class="stp-btn" data-action="dec" data-path="'+path+'" aria-label="Diminuer '+label+'">\u2212</button>'
+      + '<span class="stp-val" id="v-'+sid(path)+'">0</span>'
+      + '<button type="button" class="stp-btn" data-action="inc" data-path="'+path+'" aria-label="Augmenter '+label+'">+</button></div></div>';
+  }
+  function toggleRow(label, path){
+    return '<div class="row row-toggle" data-action="toggle" data-path="'+path+'" role="button" tabindex="0" aria-pressed="false">'
+      + '<span class="row-label">'+label+'</span><span class="toggle-box" id="v-'+sid(path)+'"></span></div>';
+  }
+  function totalRow(label, value){
+    return '<div class="row row-total"><span class="row-label">'+label+'</span><span class="stp-val">'+value+'</span></div>';
+  }
+
+  document.getElementById("rowsEngins").innerHTML = ENGINS.map(function(e){ return stepperRow(e.label,"engins."+e.id); }).join("");
+  document.getElementById("rowsNuit").innerHTML = stepperRow("Intervenants de nuit","nuit");
+  document.getElementById("rowsStandby").innerHTML = STANDBY.map(function(e){ return stepperRow(e.label,"standbyNuit."+e.id); }).join("");
+  document.getElementById("rowsWeekend").innerHTML = stepperRow("Samedi — intervenants","samedi") + stepperRow("Dimanche / jour férié — intervenants","dimancheFerie");
+  document.getElementById("rowsCoord").innerHTML = toggleRow("Coordination chantier (préparateur)","coordination") + stepperRow("Surveillant journée (standby)","surveillant");
+  document.getElementById("rowsServices").innerHTML = SERVICES.map(function(e){ return stepperRow(e.label,"services."+e.id); }).join("");
+
+  // ---- state ----
+  var dates = buildDates(START,END);
+  var currentIndex = 0;
+  var currentData = defaultDayData(dates[0]);
+  var allDays = {};
+  var statusMap = {};
+  var saveTimer = null;
+  var writeQueue = Promise.resolve();
+  var currentWeekKey = null;
+  var currentWeekDates = [];
+  var pollTimer = null;
+  var setupOk = true;
+
+  var mainEl = document.querySelector("main");
+  var taEl = document.getElementById("commentaire");
+  var datePickerEl = document.getElementById("datePicker");
+  datePickerEl.min = START; datePickerEl.max = END;
+
+  // ---- config & token ----
+  function getConfig(){
+    var cfg = {};
+    for(var k in CONFIG_DEFAULTS) cfg[k]=CONFIG_DEFAULTS[k];
+    try{
+      var raw = localStorage.getItem("ghConfig");
+      if(raw){ var over=JSON.parse(raw); for(var k2 in over){ if(over[k2]) cfg[k2]=over[k2]; } }
+    }catch(e){}
+    return cfg;
+  }
+  function getToken(){ try{ return localStorage.getItem("ghToken")||""; }catch(e){ return ""; } }
+  function setToken(t){ try{ localStorage.setItem("ghToken",t); }catch(e){} }
+  function clearToken(){ try{ localStorage.removeItem("ghToken"); }catch(e){} }
+
+  // ---- GitHub API ----
+  function encodeB64Utf8(str){ return btoa(unescape(encodeURIComponent(str))); }
+  function decodeB64Utf8(b64){ return decodeURIComponent(escape(atob(b64))); }
+
+  function ghGet(){
+    var cfg = getConfig();
+    var token = getToken();
+    var headers = {"Accept":"application/vnd.github+json"};
+    if(token) headers["Authorization"] = "Bearer "+token;
+    var url = "https://api.github.com/repos/"+cfg.owner+"/"+cfg.repo+"/contents/"+cfg.path+"?ref="+encodeURIComponent(cfg.branch)+"&t="+Date.now();
+    return fetch(url,{headers:headers}).then(function(res){
+      if(res.status===404){ return {data:{days:{}}, sha:null}; }
+      if(res.status===401 || res.status===403){ var e=new Error("AUTH"); e.code="auth"; throw e; }
+      if(!res.ok){ var e2=new Error("HTTP_"+res.status); e2.code="http"; throw e2; }
+      return res.json().then(function(json){
+        var content = decodeB64Utf8(json.content.replace(/\n/g,""));
+        var data={days:{}};
+        try{ data = JSON.parse(content); if(!data.days) data.days={}; }catch(e3){ data={days:{}}; }
+        return {data:data, sha:json.sha};
+      });
+    });
+  }
+
+  function ghPut(dataObj, sha, message){
+    var cfg = getConfig();
+    var token = getToken();
+    if(!token){ var e=new Error("NO_TOKEN"); e.code="no_token"; return Promise.reject(e); }
+    var body = {message:message, content:encodeB64Utf8(JSON.stringify(dataObj)), branch:cfg.branch};
+    if(sha) body.sha = sha;
+    return fetch("https://api.github.com/repos/"+cfg.owner+"/"+cfg.repo+"/contents/"+cfg.path,{
+      method:"PUT",
+      headers:{"Accept":"application/vnd.github+json","Authorization":"Bearer "+token,"Content-Type":"application/json"},
+      body:JSON.stringify(body)
+    }).then(function(res){
+      if(res.status===409){ var e=new Error("CONFLICT"); e.code="conflict"; throw e; }
+      if(res.status===401 || res.status===403){ var e2=new Error("AUTH"); e2.code="auth"; throw e2; }
+      if(!res.ok){ var e3=new Error("HTTP_"+res.status); e3.code="http"; throw e3; }
+      return res.json();
+    });
+  }
+
+  function saveDayToGitHub(dateISO, payload){
+    var attempt = 0;
+    function tryOnce(){
+      attempt++;
+      return ghGet().then(function(cur){
+        cur.data.days = cur.data.days || {};
+        cur.data.days[dateISO] = payload;
+        allDays = cur.data.days;
+        return ghPut(cur.data, cur.sha, "Suivi "+dateISO).then(function(){
+          statusMap[dateISO] = computeHasActivity(payload);
+          refreshDot(dateISO);
+        });
+      }).catch(function(err){
+        if(err.code==="conflict" && attempt<5){ return sleep(300*attempt).then(tryOnce); }
+        throw err;
+      });
+    }
+    return tryOnce();
+  }
+
+  // ---- UI helpers ----
+  function reflectDOM(path, value){
+    var valEl = document.getElementById("v-"+sid(path));
+    if(!valEl) return;
+    var rowEl = document.querySelector('.row[data-path="'+path+'"]');
+    if(typeof value === "boolean"){
+      valEl.classList.toggle("checked", value);
+      if(rowEl) rowEl.setAttribute("aria-pressed", value?"true":"false");
+    } else {
+      valEl.textContent = String(value);
+      if(rowEl) rowEl.classList.toggle("is-active", value>0);
+    }
+  }
+  function syncUI(data){
+    ALL_NUMERIC_PATHS.forEach(function(p){ reflectDOM(p, getNested(data,p)||0); });
+    ALL_TOGGLE_PATHS.forEach(function(p){ reflectDOM(p, !!getNested(data,p)); });
+    if(document.activeElement !== taEl){ taEl.value = data.commentaire || ""; }
+  }
+  function setSyncStatus(state){
+    var el=document.getElementById("syncStatus"), label=document.getElementById("syncLabel");
+    el.setAttribute("data-state",state);
+    if(state==="ok") label.textContent="Enregistré";
+    else if(state==="pending") label.textContent="Enregistrement…";
+    else if(state==="error") label.textContent="Échec — nouvel essai";
+    else if(state==="auth") label.textContent="Code invalide";
+    else if(state==="readonly") label.textContent="Lecture seule";
+    else label.textContent="Chargement…";
+  }
+  function refreshDot(dateISO){
+    var idx=dates.indexOf(dateISO); if(idx<0) return;
+    var dot=document.getElementById("dot-"+idx);
+    if(dot) dot.classList.toggle("filled", !!statusMap[dateISO]);
+  }
+  function refreshAllDots(){ dates.forEach(function(dt){ statusMap[dt]=computeHasActivity(mergeDefaults(allDays[dt],dt)); refreshDot(dt); }); }
+
+  function commitSave(){
+    if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; }
+    var dateISO = dates[currentIndex];
+    var payload = JSON.parse(JSON.stringify(currentData));
+    setSyncStatus("pending");
+    writeQueue = writeQueue.then(function(){
+      return saveDayToGitHub(dateISO, payload).then(function(){
+        setSyncStatus("ok");
+      }).catch(function(err){
+        if(err.code==="no_token"){ setSyncStatus("readonly"); openSettings(); }
+        else if(err.code==="auth"){ setSyncStatus("auth"); }
+        else { setSyncStatus("error"); }
+      });
+    }).catch(function(){});
+  }
+  function queueChange(){
+    setSyncStatus("pending");
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(commitSave, 500);
+  }
+
+  mainEl.addEventListener("click", function(e){
+    var stp = e.target.closest(".stp-btn");
+    if(stp){
+      var path=stp.getAttribute("data-path"), action=stp.getAttribute("data-action");
+      var v=getNested(currentData,path)||0;
+      v = action==="inc" ? Math.min(30,v+1) : Math.max(0,v-1);
+      setNested(currentData,path,v); reflectDOM(path,v); queueChange();
+      return;
+    }
+    var tgl = e.target.closest('[data-action="toggle"]');
+    if(tgl){
+      var p2=tgl.getAttribute("data-path"); var v2=!getNested(currentData,p2);
+      setNested(currentData,p2,v2); reflectDOM(p2,v2); queueChange();
+      return;
+    }
+  });
+  mainEl.addEventListener("keydown", function(e){
+    if(e.key==="Enter"||e.key===" "){
+      var tgl=e.target.closest('[data-action="toggle"]');
+      if(tgl){ e.preventDefault(); tgl.click(); }
+    }
+  });
+  taEl.addEventListener("input", function(){ currentData.commentaire = taEl.value; queueChange(); });
+
+  function updateHeader(dateISO){
+    var d=isoToDate(dateISO);
+    document.getElementById("dayName").textContent = fmtLong(d);
+    document.getElementById("daySub").textContent = "Jour "+(currentIndex+1)+" sur "+dates.length;
+    var next=addDays(d,1);
+    document.getElementById("nuitSub").textContent = "Nuit du "+fmtShort(d)+" au "+fmtShort(next)+" — bien vérifier qu'il s'agit de la nuit suivant ce jour, et non de la nuit précédente.";
+    datePickerEl.value = dateISO;
+    document.getElementById("btnPrev").disabled = currentIndex<=0;
+    document.getElementById("btnNext").disabled = currentIndex>=dates.length-1;
+  }
+  function updateStripActive(idx){
+    document.querySelectorAll(".chip").forEach(function(c){ c.classList.remove("active"); });
+    var chip=document.getElementById("chip-"+idx);
+    if(chip){ chip.classList.add("active"); chip.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }
+  }
+
+  // ---- weekly totals ----
+  function getWeekInfo(dateISO){
+    var d=isoToDate(dateISO), day=d.getDay(), diff=(day===0?-6:1-day), monday=addDays(d,diff), out=[];
+    for(var i=0;i<7;i++){ var iso=isoOf(addDays(monday,i)); if(dates.indexOf(iso)>=0) out.push(iso); }
+    return {monday:monday, dates:out};
+  }
+  function computeWeekSums(weekDates){
+    var s={engins:{},standbyNuit:{},nuit:0,samedi:0,dimancheFerie:0,coordinationDays:0,surveillant:0,services:{},daysWithComment:[]};
+    ENGINS.forEach(function(e){ s.engins[e.id]=0; });
+    STANDBY.forEach(function(e){ s.standbyNuit[e.id]=0; });
+    SERVICES.forEach(function(e){ s.services[e.id]=0; });
+    weekDates.forEach(function(dt){
+      var d = mergeDefaults(allDays[dt], dt);
+      ENGINS.forEach(function(e){ s.engins[e.id]+=d.engins[e.id]||0; });
+      STANDBY.forEach(function(e){ s.standbyNuit[e.id]+=d.standbyNuit[e.id]||0; });
+      s.nuit+=d.nuit||0; s.samedi+=d.samedi||0; s.dimancheFerie+=d.dimancheFerie||0; s.surveillant+=d.surveillant||0;
+      if(d.coordination) s.coordinationDays++;
+      SERVICES.forEach(function(e){ s.services[e.id]+=d.services[e.id]||0; });
+      if(d.commentaire && d.commentaire.trim()) s.daysWithComment.push(dt);
+    });
+    return s;
+  }
+  function refreshWeekView(){
+    var sums = computeWeekSums(currentWeekDates);
+    document.getElementById("rowsWeekEngins").innerHTML = ENGINS.map(function(e){ return totalRow(e.label, sums.engins[e.id]||0); }).join("");
+    document.getElementById("rowsWeekStandby").innerHTML = STANDBY.map(function(e){ return totalRow(e.label, sums.standbyNuit[e.id]||0); }).join("");
+    document.getElementById("rowsWeekMisc").innerHTML =
+      totalRow("Intervenants de nuit (total)", sums.nuit) +
+      totalRow("Samedi — intervenants (total)", sums.samedi) +
+      totalRow("Dimanche / jour férié — intervenants (total)", sums.dimancheFerie) +
+      totalRow("Surveillant journée (total)", sums.surveillant) +
+      totalRow("Coordination — jours couverts", sums.coordinationDays);
+    document.getElementById("rowsWeekServices").innerHTML = SERVICES.map(function(e){ return totalRow(e.label, sums.services[e.id]||0); }).join("");
+    var wc=document.getElementById("weekComments");
+    if(sums.daysWithComment.length){ wc.style.display="block"; wc.textContent="Commentaires présents : "+sums.daysWithComment.map(function(dt){ return fmtShort(isoToDate(dt)); }).join(", "); }
+    else { wc.style.display="none"; wc.textContent=""; }
+  }
+  function loadWeek(dateISO){
+    var info = getWeekInfo(dateISO);
+    document.getElementById("weekRange").textContent = "Récap. semaine du "+fmtShort(info.monday)+" au "+fmtShort(addDays(info.monday,6));
+    currentWeekKey = isoOf(info.monday);
+    currentWeekDates = info.dates;
+    refreshWeekView();
+  }
+
+  function loadDayFromCache(idx){
+    var dateISO = dates[idx];
+    currentData = mergeDefaults(allDays[dateISO], dateISO);
+    syncUI(currentData);
+    updateHeader(dateISO);
+    updateStripActive(idx);
+    loadWeek(dateISO);
+  }
+  function goToDay(idx){
+    idx = Math.max(0, Math.min(dates.length-1, idx));
+    if(idx===currentIndex) return;
+    if(saveTimer){ commitSave(); }
+    currentIndex = idx;
+    loadDayFromCache(idx);
+  }
+
+  function renderStrip(){
+    document.getElementById("strip").innerHTML = dates.map(function(dt,i){
+      var d=isoToDate(dt), wd=d.toLocaleDateString("fr-FR",{weekday:"short"}).replace(".","");
+      return '<button type="button" class="chip'+(isWeekend(d)?' weekend':'')+'" id="chip-'+i+'" data-idx="'+i+'">'
+        + '<span class="chip-day">'+d.getDate()+'</span><span class="chip-wd">'+wd+'</span><span class="chip-dot" id="dot-'+i+'"></span></button>';
+    }).join("");
+    document.getElementById("strip").addEventListener("click", function(e){
+      var chip=e.target.closest(".chip"); if(chip) goToDay(parseInt(chip.getAttribute("data-idx"),10));
+    });
+  }
+
+  // ---- refresh from GitHub (polling) ----
+  function refreshAllFromGitHub(){
+    return ghGet().then(function(cur){
+      allDays = cur.data.days || {};
+      refreshAllDots();
+      refreshWeekView();
+      if(!saveTimer && document.activeElement !== taEl){
+        var dateISO = dates[currentIndex];
+        currentData = mergeDefaults(allDays[dateISO], dateISO);
+        syncUI(currentData);
+      }
+      if(getToken()) setSyncStatus("ok");
+    }).catch(function(err){
+      if(err.code==="auth"){ setSyncStatus("auth"); }
+    });
+  }
+
+  function schedulePoll(){
+    if(pollTimer) clearInterval(pollTimer);
+    var interval = getToken() ? 30000 : 60000;
+    pollTimer = setInterval(function(){
+      if(!setupOk) return;
+      refreshAllFromGitHub();
+    }, interval);
+  }
+
+  // ---- export ----
+  function toCsv(rows){
+    var lines=["Article;Valeur"];
+    rows.forEach(function(r){ lines.push('"'+String(r[0]).replace(/"/g,'""')+'";"'+String(r[1]).replace(/"/g,'""')+'"'); });
+    return lines.join("\r\n");
+  }
+  function downloadBlob(filename, blobOrString, mime){
+    var blob = (blobOrString instanceof Blob) ? blobOrString : new Blob([blobOrString], {type:mime||"application/octet-stream"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  }
+  function dayRowsFor(data){
+    var rows=[];
+    ENGINS.forEach(function(e){ rows.push([e.label, data.engins[e.id]||0]); });
+    rows.push(["Intervenants de nuit", data.nuit||0]);
+    STANDBY.forEach(function(e){ rows.push(["Stand-by câbles — "+e.label, data.standbyNuit[e.id]||0]); });
+    rows.push(["Samedi — intervenants", data.samedi||0]);
+    rows.push(["Dimanche / jour férié — intervenants", data.dimancheFerie||0]);
+    rows.push(["Coordination chantier", data.coordination?"Oui":"Non"]);
+    rows.push(["Surveillant journée", data.surveillant||0]);
+    SERVICES.forEach(function(e){ rows.push([e.label, data.services[e.id]||0]); });
+    rows.push(["Commentaire", data.commentaire||""]);
+    return rows;
+  }
+  function weekRowsFor(sums){
+    var rows=[];
+    ENGINS.forEach(function(e){ rows.push([e.label, sums.engins[e.id]||0]); });
+    rows.push(["Intervenants de nuit (total)", sums.nuit||0]);
+    STANDBY.forEach(function(e){ rows.push(["Stand-by câbles — "+e.label, sums.standbyNuit[e.id]||0]); });
+    rows.push(["Samedi — intervenants (total)", sums.samedi||0]);
+    rows.push(["Dimanche / jour férié — intervenants (total)", sums.dimancheFerie||0]);
+    rows.push(["Coordination — jours couverts", sums.coordinationDays||0]);
+    rows.push(["Surveillant journée (total)", sums.surveillant||0]);
+    SERVICES.forEach(function(e){ rows.push([e.label, sums.services[e.id]||0]); });
+    return rows;
+  }
+  function buildPdf(titleLine, subtitleLine, rows){
+    if(!window.jspdf || !window.jspdf.jsPDF) return null;
+    var doc = new window.jspdf.jsPDF();
+    var y=18;
+    doc.setFontSize(15); doc.text(titleLine,14,y); y+=7;
+    doc.setFontSize(10); doc.setTextColor(90); doc.text(subtitleLine,14,y); doc.setTextColor(20); y+=9;
+    doc.setFontSize(11);
+    rows.forEach(function(r){
+      var label=String(r[0]), value=String(r[1]);
+      var labelLines = doc.splitTextToSize(label,130);
+      labelLines.forEach(function(ll,i){
+        if(y>282){ doc.addPage(); y=18; }
+        doc.text(ll,14,y);
+        if(i===labelLines.length-1){ doc.text(value,195,y,{align:"right"}); }
+        y+=6;
+      });
+    });
+    return doc;
+  }
+  function exportDayPdf(){
+    var dateISO = dates[currentIndex];
+    var doc = buildPdf("BRUGES GALUS — Suivi grutier","Journée du "+fmtLong(isoToDate(dateISO)), dayRowsFor(currentData));
+    if(!doc){ alert("La génération de PDF n'est pas disponible hors connexion. Essayez l'export CSV."); return; }
+    downloadBlob("bruges-galus-"+dateISO+".pdf", doc.output("blob"));
+  }
+  function exportWeekPdf(){
+    var sums = computeWeekSums(currentWeekDates);
+    var mondayISO = currentWeekDates[0] || dates[currentIndex];
+    var lastISO = currentWeekDates[currentWeekDates.length-1] || mondayISO;
+    var doc = buildPdf("BRUGES GALUS — Récapitulatif hebdomadaire","Semaine du "+fmtLong(isoToDate(mondayISO))+" au "+fmtLong(isoToDate(lastISO)), weekRowsFor(sums));
+    if(!doc){ alert("La génération de PDF n'est pas disponible hors connexion. Essayez l'export CSV."); return; }
+    downloadBlob("bruges-galus-semaine-"+mondayISO+".pdf", doc.output("blob"));
+  }
+  function exportDayCsv(){
+    var dateISO = dates[currentIndex];
+    downloadBlob("bruges-galus-"+dateISO+".csv", toCsv(dayRowsFor(currentData)), "text/csv");
+  }
+  function exportWeekCsv(){
+    var sums = computeWeekSums(currentWeekDates);
+    var mondayISO = currentWeekDates[0] || dates[currentIndex];
+    downloadBlob("bruges-galus-semaine-"+mondayISO+".csv", toCsv(weekRowsFor(sums)), "text/csv");
+  }
+
+  // ---- settings modal ----
+  var modalBackdrop = document.getElementById("modalBackdrop");
+  function openSettings(){
+    document.getElementById("tokenInput").value = getToken();
+    var cfg = getConfig();
+    document.getElementById("ownerInput").value = cfg.owner;
+    document.getElementById("repoInput").value = cfg.repo;
+    document.getElementById("branchInput").value = cfg.branch;
+    document.getElementById("modalStatus").textContent = "";
+    document.getElementById("modalStatus").className = "modal-status";
+    modalBackdrop.classList.add("open");
+  }
+  function closeSettings(){ modalBackdrop.classList.remove("open"); }
+
+  document.getElementById("btnSettings").addEventListener("click", openSettings);
+  document.getElementById("btnCloseModal").addEventListener("click", closeSettings);
+  modalBackdrop.addEventListener("click", function(e){ if(e.target===modalBackdrop) closeSettings(); });
+  document.getElementById("advToggle").addEventListener("click", function(){
+    document.getElementById("advFields").classList.toggle("open");
+  });
+  document.getElementById("btnClearToken").addEventListener("click", function(){
+    clearToken();
+    document.getElementById("tokenInput").value = "";
+    document.getElementById("modalStatus").className = "modal-status";
+    document.getElementById("modalStatus").textContent = "Code effacé sur cet appareil.";
+    schedulePoll();
+    setSyncStatus("readonly");
+  });
+  document.getElementById("btnSaveToken").addEventListener("click", function(){
+    var t = document.getElementById("tokenInput").value.trim();
+    var owner = document.getElementById("ownerInput").value.trim();
+    var repo = document.getElementById("repoInput").value.trim();
+    var branch = document.getElementById("branchInput").value.trim();
+    try{ localStorage.setItem("ghConfig", JSON.stringify({owner:owner,repo:repo,branch:branch})); }catch(e){}
+    setToken(t);
+    var statusEl = document.getElementById("modalStatus");
+    statusEl.className = "modal-status"; statusEl.textContent = "Vérification…";
+    refreshAllFromGitHub().then(function(){
+      var st = document.getElementById("syncStatus").getAttribute("data-state");
+      if(st==="auth"){ statusEl.className="modal-status err"; statusEl.textContent="Code refusé — vérifiez qu'il a bien été collé en entier."; }
+      else { statusEl.className="modal-status ok"; statusEl.textContent="Connecté."; schedulePoll(); setTimeout(closeSettings, 700); }
+    });
+  });
+
+  // ---- init ----
+  function init(){
+    renderStrip();
+
+    var cfg = getConfig();
+    setupOk = (cfg.owner !== "VOTRE-COMPTE-GITHUB" && cfg.repo !== "VOTRE-DEPOT" && cfg.owner && cfg.repo);
+    if(!setupOk){
+      document.getElementById("setupBanner").style.display = "block";
+      setSyncStatus("error");
+    }
+    if(!getToken()){ document.getElementById("noTokenBanner").style.display = "block"; }
+
+    var todayISO = todayLocalISO();
+    var startIdx = dates.indexOf(todayISO);
+    currentIndex = startIdx>=0 ? startIdx : 0;
+
+    if(setupOk){
+      refreshAllFromGitHub().then(function(){
+        loadDayFromCache(currentIndex);
+        schedulePoll();
+      });
+    } else {
+      loadDayFromCache(currentIndex);
+    }
+
+    document.getElementById("btnPrev").addEventListener("click", function(){ goToDay(currentIndex-1); });
+    document.getElementById("btnNext").addEventListener("click", function(){ goToDay(currentIndex+1); });
+    document.getElementById("btnToday").addEventListener("click", function(){ var i=dates.indexOf(todayLocalISO()); if(i>=0) goToDay(i); });
+    datePickerEl.addEventListener("change", function(){ var i=dates.indexOf(datePickerEl.value); if(i>=0) goToDay(i); });
+    window.addEventListener("beforeunload", function(){ if(saveTimer) commitSave(); });
+
+    document.getElementById("btnExportDayPdf").addEventListener("click", exportDayPdf);
+    document.getElementById("btnExportDayCsv").addEventListener("click", exportDayCsv);
+    document.getElementById("btnExportWeekPdf").addEventListener("click", exportWeekPdf);
+    document.getElementById("btnExportWeekCsv").addEventListener("click", exportWeekCsv);
+  }
+
+  if(document.readyState === "loading"){ document.addEventListener("DOMContentLoaded", init); }
+  else { init(); }
+})();
+</script>
+</body>
+</html>
